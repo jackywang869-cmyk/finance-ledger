@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>理財記錄本</title>
+<style>
+:root{
+  --bg:#f4f6f9; --card:#ffffff; --line:#e3e8ef; --line2:#eef1f6;
+  --text:#1f2937; --muted:#6b7280; --faint:#9ca3af;
+  --pri:#2563eb; --pri-soft:#eff4ff; --pri-dark:#1d4ed8;
+  --ok:#0f766e; --ok-soft:#e6f5f2;
+  --warn:#b45309; --warn-soft:#fef3c7;
+  --due:#b91c1c; --due-soft:#fee2e2;
+  --radius:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Segoe UI",system-ui,sans-serif;
+  font-size:15px; line-height:1.55;
+}
+header{
+  background:#fff;border-bottom:1px solid var(--line);
+  padding:14px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  position:sticky;top:0;z-index:30;
+}
+header h1{font-size:19px;margin:0;font-weight:700;letter-spacing:.5px}
+header .sub{color:var(--muted);font-size:12.5px}
+header .spacer{flex:1}
+main{padding:18px 22px 60px;max-width:1360px;margin:0 auto}
+
+button{
+  font:inherit;font-size:13.5px;border:1px solid var(--line);background:#fff;color:var(--text);
+  padding:7px 13px;border-radius:8px;cursor:pointer;transition:.15s;white-space:nowrap;
+}
+button:hover{background:var(--line2);border-color:#cfd7e3}
+button.primary{background:var(--pri);border-color:var(--pri);color:#fff}
+button.primary:hover{background:var(--pri-dark);border-color:var(--pri-dark)}
+button.danger{color:var(--due);border-color:#f3c7c7}
+button.danger:hover{background:var(--due-soft)}
+button.sm{padding:4px 9px;font-size:12.5px;border-radius:6px}
+button:disabled{opacity:.45;cursor:not-allowed}
+
+input,select,textarea{
+  font:inherit;font-size:14px;padding:7px 10px;border:1px solid var(--line);
+  border-radius:8px;background:#fff;color:var(--text);width:100%;
+}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--pri-soft);border-color:var(--pri)}
+label{font-size:12.5px;color:var(--muted);display:block;margin-bottom:4px;font-weight:600}
+.field{margin-bottom:2px}
+.err{color:var(--due);font-size:11.5px;min-height:16px;margin-top:2px}
+.invalid input{border-color:var(--due)}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px}
+.card .k{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.3px}
+.card .v{font-size:21px;font-weight:700;margin-top:3px;letter-spacing:.3px}
+.card .n{font-size:12px;color:var(--faint);margin-top:3px}
+.card.alert .v{color:var(--warn)}
+
+.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:0}
+.tab{
+  padding:9px 18px;border:none;background:none;border-radius:8px 8px 0 0;
+  color:var(--muted);font-weight:600;font-size:14.5px;cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;
+}
+.tab.active{color:var(--pri);border-bottom-color:var(--pri)}
+.view{display:none}.view.active{display:block}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px;margin-bottom:14px}
+.panel h2{font-size:15px;margin:0 0 12px;font-weight:700;display:flex;align-items:center;gap:8px}
+.panel h2 .hint{font-weight:400;font-size:12px;color:var(--faint)}
+.grid{display:grid;gap:11px}
+.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.rowbtns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:1120px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line2);vertical-align:middle}
+th{
+  background:#f8fafc;font-size:12.5px;color:var(--muted);font-weight:700;
+  cursor:pointer;user-select:none;white-space:nowrap;position:sticky;top:0;
+}
+th:hover{color:var(--pri)}
+th .ar{color:var(--pri);font-size:11px}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:hover{background:#fafbfd}
+tbody tr:last-child td{border-bottom:none}
+.code{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:var(--muted)}
+.note{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12.5px}
+.name{font-weight:600}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.b-ok{background:var(--ok-soft);color:var(--ok)}
+.b-warn{background:var(--warn-soft);color:var(--warn)}
+.b-due{background:var(--due-soft);color:var(--due)}
+.b-gray{background:#f1f3f7;color:var(--muted)}
+.empty{padding:44px 10px;text-align:center;color:var(--faint);font-size:14px}
+
+.bar{height:7px;background:#eef1f6;border-radius:4px;overflow:hidden;margin-top:5px}
+.bar span{display:block;height:100%;background:var(--pri);border-radius:4px}
+.bar.g span{background:var(--ok)}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.right{text-align:right}
+
+#modal{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:26px 14px;overflow:auto}
+#modal.show,#dlg.show{display:flex}
+#dlg{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:flex-start;justify-content:center;z-index:60;padding:26px 14px;overflow:auto}
+.modalbox{background:#fff;border-radius:14px;width:100%;max-width:660px;box-shadow:0 18px 45px rgba(0,0,0,.22)}
+.modalbox .mh{padding:15px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+.modalbox .mh h3{margin:0;font-size:16px}
+.modalbox .mb{padding:18px 20px}
+.modalbox .mf{padding:13px 20px;border-top:1px solid var(--line);display:flex;gap:9px;justify-content:flex-end;background:#fbfcfe;border-radius:0 0 14px 14px}
+.x{margin-left:auto;border:none;background:none;font-size:20px;color:var(--muted);cursor:pointer;padding:0 4px;line-height:1}
+.x:hover{color:var(--text);background:none}
+
+#toast{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:8px;z-index:80}
+.toast{background:#111827;color:#fff;padding:10px 16px;border-radius:9px;font-size:13.5px;box-shadow:0 8px 22px rgba(0,0,0,.25);animation:tin .2s ease}
+.toast.err{background:#b91c1c}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}}
+
+.chk{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted);font-weight:600;margin:0;cursor:pointer}
+.chk input{width:auto;margin:0}
+.st-ok{color:var(--ok);font-weight:700}
+.st-fail{color:var(--due);font-weight:700}
+.st-load{color:var(--muted)}
+.tag{font-size:11.5px;color:var(--faint)}
+.dlgbtns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+@media print{
+  header button,.rowbtns,.tabs,.no-print{display:none!important}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>理財記錄本</h1>
+    <div class="sub">本地儲存 · 單檔網頁 · 重啟不遺失</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="rowbtns no-print">
+    <button class="primary" id="btnAdd">＋ 新增記錄</button>
+    <button id="btnExport">匯出備份 (JSON)</button>
+    <button id="btnImport">匯入備份</button>
+    <button id="btnCsv">匯出 CSV</button>
+    <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
+  </div>
+</header>
+
+<main>
+  <section class="cards" id="cards"></section>
+
+  <div class="tabs">
+    <button class="tab active" data-view="list">記錄列表</button>
+    <button class="tab" data-view="stats">統計分析</button>
+  </div>
+
+  <!-- 列表 -->
+  <section class="view active" id="view-list">
+    <div class="panel">
+      <h2>篩選與搜尋 <span class="hint">條件可疊加，按「清除篩選」重置</span></h2>
+      <div class="grid g4">
+        <div class="field"><label>關鍵字</label><input id="fKw" placeholder="銀行 / 編號 / 名稱 / 備註"></div>
+        <div class="field"><label>銀行／機構</label><select id="fBank"></select></div>
+        <div class="field"><label>幣種</label><select id="fCur"></select></div>
+        <div class="field"><label>利率篩選方式</label>
+          <select id="fRateMode">
+            <option value="overlap">與區間重疊</option>
+            <option value="contain">完全落於區間內</option>
+          </select>
+        </div>
+        <div class="field"><label>利率下限 ≥ %</label><input id="fRMin" type="number" step="0.01" placeholder="不限"></div>
+        <div class="field"><label>利率上限 ≤ %</label><input id="fRMax" type="number" step="0.01" placeholder="不限"></div>
+        <div class="field"><label>到期日（起）</label><input id="fDFrom" type="date"></div>
+        <div class="field"><label>到期日（迄）</label><input id="fDTo" type="date"></div>
+      </div>
+      <div class="rowbtns" style="margin-top:12px">
+        <button class="sm" data-quick="30">30 天內到期</button>
+        <button class="sm" data-quick="90">90 天內到期</button>
+        <button class="sm" data-quick="year">今年到期</button>
+        <button class="sm" data-quick="overdue">已到期</button>
+        <div style="flex:1"></div>
+        <span class="tag" id="filterInfo"></span>
+        <button class="sm" id="btnClear">清除篩選</button>
+      </div>
+    </div>
+
+    <div class="tblwrap">
+      <table>
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="emptyBox" style="display:none"></div>
+    </div>
+  </section>
+
+  <!-- 統計 -->
+  <section class="view" id="view-stats">
+    <div class="panel">
+      <h2>依幣種彙總 <span class="hint">本金與預期收益以原幣計；佔比以基準幣種折算</span></h2>
+      <div class="tblwrap"><table id="tCur"></table></div>
+    </div>
+
+    <div class="panel">
+      <h2>依銀行／機構彙總 <span class="hint">金額折合基準幣種，利率為本金加權平均</span></h2>
+      <div class="tblwrap"><table id="tBank"></table></div>
+    </div>
+
+    <div class="panel">
+      <h2>預期收益區間 <span class="hint">單利估算：本金 × 利率 × 存續天數 ÷ 365</span></h2>
+      <div class="tblwrap"><table id="tGain"></table></div>
+    </div>
+
+    <div class="panel">
+      <h2>到期提醒 <span class="hint" id="remindHint"></span></h2>
+      <div class="rowbtns" style="margin-bottom:10px">
+        <label style="margin:0">提醒天數</label>
+        <input id="remindDays" type="number" min="1" step="1" style="width:110px">
+        <span class="tag">已到期與 N 天內到期的產品會列於下表，並在列表頁以標籤標示</span>
+      </div>
+      <div class="tblwrap"><table id="tDue"></table></div>
+    </div>
+
+    <div class="panel">
+      <h2>匯率設定 <span class="hint">1 單位外幣 = ? 基準幣種，僅用於跨幣種佔比折算</span></h2>
+      <div class="rowbtns" style="margin-bottom:10px">
+        <label style="margin:0">基準幣種</label>
+        <select id="baseCur" style="width:130px"></select>
+        <span class="tag" id="rateStatus">尚未更新</span>
+        <button class="sm" id="btnRate">立即更新</button>
+        <label class="chk"><input type="checkbox" id="autoRate" checked> 每次開啟時自動更新</label>
+      </div>
+      <div class="grid g4" id="rateBox"></div>
+      <div class="tag" id="rateNote" style="margin-top:8px"></div>
+    </div>
+  </section>
+</main>
+
+<!-- 表單 -->
+<div id="modal">
+  <div class="modalbox">
+    <div class="mh"><h3 id="mTitle">新增記錄</h3><button class="x" id="mClose">×</button></div>
+    <div class="mb">
+      <div class="grid g3">
+        <div class="field" id="w-bank"><label>銀行／機構 *</label><input id="iBank" list="bankList" placeholder="例：玉山銀行"><div class="err"></div></div>
+        <div class="field" id="w-code"><label>產品編號</label><input id="iCode" placeholder="例：FD-2026-018"><div class="err"></div></div>
+        <div class="field" id="w-name"><label>產品名稱 *</label><input id="iName" placeholder="例：美元優利定存 6 個月"><div class="err"></div></div>
+
+        <div class="field" id="w-buy"><label>購買日 *</label><input id="iBuy" type="date"><div class="err"></div></div>
+        <div class="field" id="w-term"><label>存期</label>
+          <div style="display:flex;gap:6px">
+            <input id="iTermV" type="number" min="0" step="any" placeholder="例：6" style="flex:1">
+            <select id="iTermU" style="width:92px"><option value="D">日</option><option value="M" selected>個月</option><option value="Y">年</option></select>
+          </div><div class="err"></div>
+        </div>
+        <div class="field" id="w-due"><label>到期日</label><input id="iDue" type="date"><div class="err"></div></div>
+
+        <div class="field" id="w-cur"><label>幣種 *</label><input id="iCur" list="curList" placeholder="TWD"><div class="err"></div></div>
+        <div class="field" id="w-amt"><label>本金金額 *</label><input id="iAmt" type="number" min="0" step="any" placeholder="例：100000"><div class="err"></div></div>
+        <div class="field" id="w-both"><label>利率區間（年利率 %）</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="iRMin" type="number" step="0.001" placeholder="下限">
+            <span class="muted">～</span>
+            <input id="iRMax" type="number" step="0.001" placeholder="上限">
+          </div><div class="err"></div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:12px"><label>備註</label><textarea id="iNote" rows="2" placeholder="通路、條件、續存方式…"></textarea></div>
+      <div class="tag" id="preview" style="margin-top:8px"></div>
+    </div>
+    <div class="mf">
+      <button id="mCancel">取消</button>
+      <button class="primary" id="mSave">儲存</button>
+    </div>
+  </div>
+</div>
+
+<datalist id="bankList"></datalist>
+<datalist id="curList"></datalist>
+<div id="dlg"></div>
+<div id="toast"></div>
+
+<script>
+/* ============ 常數與狀態 ============ */
+const KEY='finance_ledger_records_v1';
+const SKEY='finance_ledger_settings_v1';
+const CUR_SYM={TWD:'NT$',USD:'US$',CNY:'¥',HKD:'HK$',MOP:'MOP$',EUR:'€',JPY:'JP¥',GBP:'£',AUD:'A$',CAD:'C$',SGD:'S$',CHF:'CHF ',NZD:'NZ$',THB:'฿',KRW:'₩',ZAR:'R',MYR:'RM'};
+const DEF_RATE={TWD:1,USD:31.5,CNY:4.4,HKD:4.02,MOP:3.935,EUR:34.2,JPY:0.208,GBP:40.1,AUD:20.5,CAD:23.0,SGD:23.6,CHF:36.1,NZD:18.8,THB:0.88,KRW:0.0232,ZAR:1.72,MYR:6.9};
+const BASES=['TWD','USD','CNY','HKD','MOP','EUR','JPY'];
+
+let records=[];
+let settings={base:'TWD',rates:{...DEF_RATE},remindDays:30};
+let sortKey='dueDate', sortDir='asc';
+let editingId=null, dueManual=false;
+const F={kw:'',bank:'',cur:'',rMin:'',rMax:'',rateMode:'overlap',dFrom:'',dTo:''};
+
+/* ============ 工具 ============ */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>{const d=new Date();return toISO(d);};
+function toISO(d){const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+function parseD(s){if(!s)return null;const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);if(!m)return null;const d=new Date(+m[1],+m[2]-1,+m[3]);return isNaN(d)?null:d;}
+function diffDays(a,b){const x=parseD(a),y=parseD(b);if(!x||!y)return null;return Math.round((y-x)/86400000);}
+function addTerm(iso,v,unit){
+  const d=parseD(iso); if(!d||!(v>0))return '';
+  const day=d.getDate();
+  if(unit==='D') d.setDate(d.getDate()+Math.round(v));
+  else if(unit==='M'){ d.setDate(1); d.setMonth(d.getMonth()+Math.round(v));
+    const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate(); d.setDate(Math.min(day,last)); }
+  else { d.setDate(1); d.setFullYear(d.getFullYear()+Math.round(v));
+    const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate(); d.setDate(Math.min(day,last)); }
+  return toISO(d);
+}
+const num=v=>{const n=parseFloat(v);return isFinite(n)?n:null;};
+function fmtN(n,d=2){if(n==null||!isFinite(n))return '—';return n.toLocaleString('zh-TW',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function fmtMoney(n,cur){if(n==null||!isFinite(n))return '—';const s=(CUR_SYM[cur]||'');return (s?s+' ':'')+fmtN(n,2)+(s?'':' '+cur);}
+function fmtRate(a,b){const x=num(a),y=num(b);if(x==null&&y==null)return '—';if(x!=null&&y!=null&&Math.abs(x-y)>1e-9)return x.toFixed(2)+'% ~ '+y.toFixed(2)+'%';const v=x!=null?x:y;return v.toFixed(2)+'%';}
+function termText(r){const v=num(r.termValue);if(v==null)return '—';const u={D:'日',M:'個月',Y:'年'}[r.termUnit||'M'];return fmtN(v,0).replace(/\.00$/,'')+' '+u;}
+function daysOf(r){
+  const d=diffDays(r.buyDate,r.dueDate);
+  if(d!=null)return d;
+  const v=num(r.termValue); if(v==null||!parseD(r.buyDate))return null;
+  return Math.round(v*({D:1,M:30.4375,Y:365}[r.termUnit||'M']));
+}
+function gain(r){const d=daysOf(r),p=num(r.principal);if(d==null||p==null)return {min:null,max:null};
+  const lo=num(r.rateMin),hi=num(r.rateMax);
+  return {min:lo==null?null:p*lo/100*d/365, max:hi==null?null:p*hi/100*d/365};}
+function toBase(amount,cur){const r=num(settings.rates[cur]);return amount*(r==null?1:r);}
+function statusOf(r){
+  const d=diffDays(today(),r.dueDate);
+  if(d==null)return {k:'none',t:'—',d:null};
+  if(d<0)return {k:'due',t:'已到期',d:d};
+  if(d<=num(settings.remindDays))return {k:'warn',t:d+' 天後到期',d:d};
+  return {k:'ok',t:'存續中',d:d};
+}
+
+/* ============ 儲存 ============ */
+function load(){
+  try{const r=JSON.parse(localStorage.getItem(KEY)||'[]');records=Array.isArray(r)?r:[];}catch(e){records=[];}
+  try{const s=JSON.parse(localStorage.getItem(SKEY)||'null');if(s&&typeof s==='object'){
+    settings.base=s.base||'TWD';settings.remindDays=num(s.remindDays)||30;
+    settings.rates=Object.assign({},DEF_RATE,s.rates||{});
+    settings.autoRate=(s.autoRate!==false);
+    settings.ratesUpdatedAt=s.ratesUpdatedAt||'';settings.ratesSource=s.ratesSource||'';}}catch(e){}
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(records));}
+  catch(e){toast('儲存失敗：瀏覽器儲存空間不足',true);}
+}
+function saveS(){try{localStorage.setItem(SKEY,JSON.stringify(settings));}catch(e){}}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+
+/* ============ Toast ============ */
+function toast(msg,isErr){
+  const d=document.createElement('div');d.className='toast'+(isErr?' err':'');d.textContent=msg;$('toast').appendChild(d);
+  setTimeout(()=>{d.style.transition='opacity .3s';d.style.opacity='0';setTimeout(()=>d.remove(),300);},2400);
+}
+
+/* ============ 篩選 / 排序 ============ */
+function filtered(){
+  let out=records.filter(r=>{
+    if(F.kw){const k=F.kw.toLowerCase();
+      if(![r.bank,r.code,r.name,r.note,r.currency].join(' ').toLowerCase().includes(k))return false;}
+    if(F.bank&&r.bank!==F.bank)return false;
+    if(F.cur&&r.currency!==F.cur)return false;
+    if(F.dFrom&&(!r.dueDate||r.dueDate<F.dFrom))return false;
+    if(F.dTo&&(!r.dueDate||r.dueDate>F.dTo))return false;
+    const lo=num(F.rMin),hi=num(F.rMax);
+    if(lo!=null||hi!=null){
+      const a=num(r.rateMin),b=num(r.rateMax),x=a!=null?a:b,y=b!=null?b:a;
+      if(x==null)return false;
+      if(F.rateMode==='contain'){ if(lo!=null&&x<lo)return false; if(hi!=null&&y>hi)return false; }
+      else { if(lo!=null&&(y==null||y<lo))return false; if(hi!=null&&x>hi)return false; }
+    }
+    return true;
+  });
+  const val=(r,k)=>{
+    switch(k){
+      case 'bank':return (r.bank||'').toLowerCase();
+      case 'code':return (r.code||'').toLowerCase();
+      case 'name':return (r.name||'').toLowerCase();
+      case 'buyDate':return r.buyDate||'';
+      case 'term':return daysOf(r)==null?-1:daysOf(r);
+      case 'dueDate':return r.dueDate||'9999-12-31';
+      case 'currency':return r.currency||'';
+      case 'principal':return num(r.principal)||0;
+      case 'rateMin':return num(r.rateMin)!=null?num(r.rateMin):(num(r.rateMax)!=null?num(r.rateMax):-1);
+      case 'gain':const g=gain(r);return g.min==null?-1:g.min;
+      default:return '';
+    }
+  };
+  out.sort((a,b)=>{const x=val(a,sortKey),y=val(b,sortKey);
+    let c=(x>y)?1:(x<y)?-1:0; if(sortDir==='desc')c=-c;
+    return c||((a.name||'').localeCompare(b.name||''));});
+  return out;
+}
+
+/* ============ 表頭 ============ */
+const COLS=[{k:'bank',t:'銀行／機構'},{k:'code',t:'產品編號'},{k:'name',t:'產品名稱'},
+  {k:'buyDate',t:'購買日'},{k:'term',t:'存期',n:1},{k:'dueDate',t:'到期日'},{k:'status',t:'狀態',nos:1},
+  {k:'currency',t:'幣種'},{k:'principal',t:'本金',n:1},{k:'rateMin',t:'利率區間',n:1},
+  {k:'gain',t:'預期收益區間',n:1},{k:'note',t:'備註',nos:1},{k:'op',t:'操作',nos:1}];
+function renderHead(){
+  $('thead').innerHTML=COLS.map(c=>{
+    const ar=sortKey===c.k?(sortDir==='asc'?' ▲':' ▼'):'';
+    return '<th class="'+(c.n?'num ':'')+(c.nos?'':'sort')+'" '+(c.nos?'':'data-k="'+c.k+'"')+'>'+c.t+'<span class="ar">'+ar+'</span></th>';
+  }).join('');
+  document.querySelectorAll('#thead th.sort').forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k; if(sortKey===k)sortDir=(sortDir==='asc'?'desc':'asc'); else {sortKey=k;sortDir='asc';}
+    render();
+  });
+}
+
+/* ============ 列表 ============ */
+function renderTable(){
+  const rows=filtered(), tb=$('tbody');
+  $('filterInfo').textContent='顯示 '+rows.length+' / '+records.length+' 筆';
+  if(!rows.length){
+    tb.innerHTML='';
+    $('emptyBox').style.display='block';
+    $('emptyBox').innerHTML=records.length
+      ? '沒有符合篩選條件的記錄。<br><button class="sm" style="margin-top:10px" onclick="document.getElementById(\'btnClear\').click()">清除篩選</button>'
+      : '尚無任何記錄。<br><button class="primary" style="margin-top:12px" onclick="openForm(null)">＋ 新增第一筆記錄</button><br><button class="sm" style="margin-top:8px" onclick="loadDemo()">載入範例資料試用</button>';
+    return;
+  }
+  $('emptyBox').style.display='none';
+  tb.innerHTML=rows.map(r=>{
+    const st=statusOf(r),g=gain(r),cls={ok:'b-ok',warn:'b-warn',due:'b-due',none:'b-gray'}[st.k];
+    return '<tr>'+
+      '<td>'+esc(r.bank)+'</td>'+
+      '<td class="code">'+esc(r.code||'—')+'</td>'+
+      '<td class="name">'+esc(r.name)+'</td>'+
+      '<td>'+esc(r.buyDate||'—')+'</td>'+
+      '<td class="num">'+termText(r)+'</td>'+
+      '<td>'+esc(r.dueDate||'—')+'</td>'+
+      '<td><span class="badge '+cls+'">'+st.t+'</span></td>'+
+      '<td>'+esc(r.currency)+'</td>'+
+      '<td class="num">'+fmtMoney(num(r.principal),r.currency)+'</td>'+
+      '<td class="num">'+fmtRate(r.rateMin,r.rateMax)+'</td>'+
+      '<td class="num">'+(g.min==null&&g.max==null?'—':fmtN(g.min)+' ~ '+fmtN(g.max))+'</td>'+
+      '<td><div class="note" title="'+esc(r.note||'')+'">'+esc(r.note||'—')+'</div></td>'+
+      '<td><button class="sm" onclick="openForm(\''+r.id+'\')">編輯</button> <button class="sm danger" onclick="del(\''+r.id+'\')">刪除</button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+/* ============ 卡片 ============ */
+function renderCards(){
+  const rows=filtered();
+  const byCur={};
+  rows.forEach(r=>{const c=r.currency||'?';byCur[c]=(byCur[c]||0)+(num(r.principal)||0);});
+  let baseTotal=0;
+  rows.forEach(r=>baseTotal+=toBase(num(r.principal)||0,r.currency||'?'));
+  let gMin=0,gMax=0;
+  rows.forEach(r=>{const g=gain(r);gMin+=toBase(g.min||0,r.currency||'?');gMax+=toBase(g.max||0,r.currency||'?');});
+  const soon=rows.filter(r=>{const d=diffDays(today(),r.dueDate);return d!=null&&d>=0&&d<=num(settings.remindDays);});
+  const over=rows.filter(r=>{const d=diffDays(today(),r.dueDate);return d!=null&&d<0;});
+  const soonAmt=soon.reduce((s,r)=>s+toBase(num(r.principal)||0,r.currency||'?'),0);
+
+  $('cards').innerHTML=
+    card('記錄筆數',fmtN(rows.length,0)+' <span class="small muted">筆</span>','共 '+records.length+' 筆資料'+(rows.length!==records.length?'（已篩選）':''))+
+    card('本金合計（折 '+settings.base+'）',fmtN(baseTotal,0),Object.keys(byCur).sort().map(c=>c+' '+fmtN(byCur[c],0)).join('　')||'尚無資料')+
+    card('預期收益區間（折 '+settings.base+'）',fmtN(gMin,0)+' ~ '+fmtN(gMax,0),'單利估算，含所有存期天數')+
+    card('到期提醒（'+num(settings.remindDays)+' 天內）',(soon.length+over.length)+' <span class="small muted">筆</span>',
+      (soon.length?soon.length+' 筆即將到期 '+fmtN(soonAmt,0)+'　':'')+(over.length?over.length+' 筆已到期':''), (soon.length+over.length)>0);
+}
+function card(k,v,n,alert){
+  return '<div class="card'+(alert?' alert':'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div><div class="n">'+esc(n)+'</div></div>';
+}
+
+/* ============ 統計 ============ */
+function renderStats(){
+  const rows=filtered();
+  /* 幣種 */
+  const cm={};
+  rows.forEach(r=>{const c=r.currency||'?';const o=cm[c]||(cm[c]={cur:c,n:0,p:0,gMin:0,gMax:0,wLo:0,wHi:0});
+    const p=num(r.principal)||0,g=gain(r);o.n++;o.p+=p;o.gMin+=g.min||0;o.gMax+=g.max||0;
+    const lo=num(r.rateMin),hi=num(r.rateMax),b=lo!=null?lo:(hi!=null?hi:0),h=hi!=null?hi:b;
+    o.wLo+=p*b;o.wHi+=p*h;});
+  const cArr=Object.values(cm).sort((a,b)=>toBase(b.p,b.cur)-toBase(a.p,a.cur));
+  const cTot=cArr.reduce((s,o)=>s+toBase(o.p,o.cur),0);
+  $('tCur').innerHTML=head(['幣種','筆數','本金合計（原幣）','折合 '+settings.base,'佔比','預期收益區間（原幣）','加權利率區間'])+
+    (cArr.length?cArr.map(o=>{const pct=cTot?toBase(o.p,o.cur)/cTot*100:0;
+      return '<tr><td><b>'+esc(o.cur)+'</b></td><td class="num">'+o.n+'</td><td class="num">'+fmtN(o.p,2)+'</td>'+
+      '<td class="num">'+fmtN(toBase(o.p,o.cur),0)+'</td>'+
+      '<td class="num">'+fmtN(pct,1)+'%<div class="bar"><span style="width:'+pct.toFixed(1)+'%"></span></div></td>'+
+      '<td class="num">'+fmtN(o.gMin,2)+' ~ '+fmtN(o.gMax,2)+'</td>'+
+      '<td class="num">'+(o.p?fmtRate(o.wLo/o.p,o.wHi/o.p):'—')+'</td></tr>';}).join('')
+      :emptyRow(7,'尚無資料'));
+
+  /* 銀行 */
+  const bm={};
+  rows.forEach(r=>{const k=r.bank||'（未填）';const o=bm[k]||(bm[k]={bank:k,n:0,p:0,wLo:0,wHi:0,curs:{}});
+    const p=num(r.principal)||0;o.n++;o.p+=toBase(p,r.currency||'?');
+    const lo=num(r.rateMin),hi=num(r.rateMax),b=lo!=null?lo:(hi!=null?hi:0),h=hi!=null?hi:b;
+    const pb=toBase(p,r.currency||'?');o.wLo+=pb*b;o.wHi+=pb*h;o.curs[r.currency||'?']=1;});
+  const bArr=Object.values(bm).sort((a,b)=>b.p-a.p);
+  const bTot=bArr.reduce((s,o)=>s+o.p,0);
+  $('tBank').innerHTML=head(['銀行／機構','筆數','本金合計（折 '+settings.base+'）','佔比','加權利率區間','幣種'])+
+    (bArr.length?bArr.map(o=>{const pct=bTot?o.p/bTot*100:0;
+      return '<tr><td><b>'+esc(o.bank)+'</b></td><td class="num">'+o.n+'</td><td class="num">'+fmtN(o.p,0)+'</td>'+
+      '<td class="num">'+fmtN(pct,1)+'%<div class="bar g"><span style="width:'+pct.toFixed(1)+'%"></span></div></td>'+
+      '<td class="num">'+fmtRate(o.wLo/o.p,o.wHi/o.p)+'</td><td>'+Object.keys(o.curs).join('、')+'</td></tr>';}).join('')
+      :emptyRow(6,'尚無資料'));
+
+  /* 收益：依幣種 + 合計 */
+  $('tGain').innerHTML=head(['幣種','筆數','本金合計','平均存續天數','收益下限','收益上限','區間幅度'])+
+    (cArr.length?cArr.map(o=>{
+      const days=rows.filter(r=>(r.currency||'?')===o.cur).map(r=>daysOf(r)).filter(d=>d!=null);
+      const avg=days.length?days.reduce((a,b)=>a+b,0)/days.length:null;
+      return '<tr><td><b>'+esc(o.cur)+'</b></td><td class="num">'+o.n+'</td><td class="num">'+fmtN(o.p,2)+'</td>'+
+        '<td class="num">'+(avg==null?'—':fmtN(avg,0))+'</td>'+
+        '<td class="num">'+fmtN(o.gMin,2)+'</td><td class="num">'+fmtN(o.gMax,2)+'</td>'+
+        '<td class="num">'+fmtN(o.gMax-o.gMin,2)+'</td></tr>';}).join('')
+      :emptyRow(7,'尚無資料'));
+
+  /* 到期提醒 */
+  const N=num(settings.remindDays)||30;
+  const items=rows.map(r=>({r,d:diffDays(today(),r.dueDate)})).filter(x=>x.d!=null&&x.d<=N).sort((a,b)=>a.d-b.d);
+  $('remindHint').textContent='共 '+items.length+' 筆（'+N+' 天內到期或已到期）';
+  $('tDue').innerHTML=head(['狀態','銀行／機構','產品名稱','產品編號','到期日','天數','幣種','本金','預期收益區間'])+
+    (items.length?items.map(x=>{const r=x.r,g=gain(r);
+      const cls=x.d<0?'b-due':(x.d<=N?'b-warn':'b-ok');
+      const t=x.d<0?'已到期 '+(-x.d)+' 天':(x.d===0?'今天到期':x.d+' 天後');
+      return '<tr><td><span class="badge '+cls+'">'+t+'</span></td><td>'+esc(r.bank)+'</td><td class="name">'+esc(r.name)+'</td>'+
+        '<td class="code">'+esc(r.code||'—')+'</td><td>'+esc(r.dueDate)+'</td><td class="num">'+x.d+'</td>'+
+        '<td>'+esc(r.currency)+'</td><td class="num">'+fmtMoney(num(r.principal),r.currency)+'</td>'+
+        '<td class="num">'+(g.min==null?'—':fmtN(g.min,2)+' ~ '+fmtN(g.max,2))+'</td></tr>';}).join('')
+      :emptyRow(9,'目前沒有即將到期或已到期的產品'));
+}
+function head(cols){return '<thead><tr>'+cols.map((c,i)=>'<th class="'+(i?'num':'')+'">'+c+'</th>').join('')+'</tr></thead><tbody>';}
+function emptyRow(n,t){return '<tr><td colspan="'+n+'"><div class="empty">'+t+'</div></td></tr>';}
+
+/* ============ 匯率設定 ============ */
+function renderRates(){
+  $('baseCur').innerHTML=BASES.map(c=>'<option'+((settings.base||'TWD')===c?' selected':'')+'>'+c+'</option>').join('');
+  const curs=[...new Set(records.map(r=>r.currency||'?').concat(Object.keys(DEF_RATE)))].sort();
+  $('rateBox').innerHTML=curs.map(c=>{
+    const v=num(settings.rates[c]);const disp=(v!=null&&isFinite(v))?(+v.toFixed(6)):1;
+    return '<div class="field"><label>1 '+esc(c)+' = ? '+esc(settings.base)+'</label>'+
+    '<input type="number" step="0.0001" min="0" data-cur="'+esc(c)+'" value="'+disp+'"></div>';}).join('');
+  $('rateBox').querySelectorAll('input').forEach(i=>i.oninput=()=>{
+    const v=num(i.value); if(v!=null&&v>=0){settings.rates[i.dataset.cur]=v;saveS();renderCards();renderStats();}
+  });
+  $('autoRate').checked=(settings.autoRate!==false);
+}
+
+/* ============ 匯率自動更新（聯網） ============ */
+/* 三個免金鑰來源依序嘗試；語意皆為「1 基準幣 = v 外幣」，程式轉成「1 外幣 = 1/v 基準幣」 */
+const RATE_SRC=[
+  {n:'jsdelivr',url:b=>'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/'+b+'.json',pick:(j,b)=>j[b]},
+  {n:'currency-api',url:b=>'https://latest.currency-api.pages.dev/v1/currencies/'+b+'.json',pick:(j,b)=>j[b]},
+  {n:'open.er-api',url:b=>'https://open.er-api.com/v6/latest/'+b.toUpperCase(),pick:j=>j.rates}
+];
+let rateBusy=false;
+function setRateStatus(cls,text){const el=$('rateStatus');el.className='tag '+(cls||'');el.textContent=text;}
+function rateTime(){const d=settings.ratesUpdatedAt?new Date(settings.ratesUpdatedAt):null;
+  return d?d.toLocaleString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'';}
+async function fetchRates(auto){
+  if(rateBusy)return;
+  rateBusy=true;$('btnRate').disabled=true;setRateStatus('st-load','正在更新匯率…');
+  const b=settings.base||'TWD', bl=b.toLowerCase();
+  let ok=false,src='',out=null;
+  for(const s of RATE_SRC){
+    try{
+      const ctl=(typeof AbortController!=='undefined')?new AbortController():null;
+      const to=ctl?setTimeout(()=>ctl.abort(),7000):null;
+      const res=await fetch(s.url(bl),ctl?{signal:ctl.signal,cache:'no-store'}:{cache:'no-store'});
+      if(to)clearTimeout(to);
+      if(!res||!res.ok)continue;
+      const j=await res.json();
+      const obj=s.pick(j,bl);
+      if(!obj||typeof obj!=='object')continue;
+      const map={};
+      Object.keys(obj).forEach(k=>{const v=parseFloat(obj[k]);if(isFinite(v)&&v>0)map[String(k).toUpperCase()]=v;});
+      if(Object.keys(map).length<2)continue;
+      out={};Object.keys(map).forEach(c=>{out[c]=1/map[c];});out[b]=1;
+      settings.rates=Object.assign({},settings.rates,out);
+      settings.ratesUpdatedAt=new Date().toISOString();settings.ratesSource=s.n;saveS();
+      ok=true;src=s.n;break;
+    }catch(e){/* 換下一個來源 */}
+  }
+  rateBusy=false;$('btnRate').disabled=false;
+  renderRates();renderCards();renderStats();
+  const ts=rateTime();
+  const miss=[...new Set(records.map(r=>r.currency||'?'))].filter(c=>c!=='?'&&!(out&&out[c]!=null));
+  if(ok){
+    setRateStatus('st-ok','已更新 · '+(ts||'')+' · 來源 '+src);
+    $('rateNote').textContent='匯率已由網路自動取得（基準 '+b+'，1 外幣 = ? '+b+'）。手動改過的值會在下次更新時被覆蓋。'
+      +(miss.length?'　⚠ 抓不到匯率的幣種：'+miss.join('、')+'，暫以 1 計算':'');
+    if(!auto)toast('匯率已更新（來源 '+src+'）');
+  }else{
+    setRateStatus('st-fail','自動更新失敗 · 使用'+(settings.ratesUpdatedAt?'上次匯率（'+ts+'）':'內建預設匯率'));
+    $('rateNote').textContent='無法連線取得匯率（離線，或瀏覽器阻擋了跨網域請求）。目前沿用'
+      +(settings.ratesUpdatedAt?'上次成功取得的匯率':'內建預設匯率')+'，可直接手動修改上方欄位，其餘功能不受影響。';
+    if(!auto)toast('匯率更新失敗，請檢查網路連線',true);
+  }
+}
+
+/* ============ 下拉選單 ============ */
+function renderSelects(){
+  const banks=[...new Set(records.map(r=>r.bank).filter(Boolean))].sort();
+  const curs=[...new Set(records.map(r=>r.currency).filter(Boolean))].sort();
+  const keepB=F.bank,keepC=F.cur;
+  $('fBank').innerHTML='<option value="">全部</option>'+banks.map(b=>'<option>'+esc(b)+'</option>').join('');
+  $('fCur').innerHTML='<option value="">全部</option>'+curs.map(c=>'<option>'+esc(c)+'</option>').join('');
+  $('fBank').value=banks.includes(keepB)?keepB:'';
+  $('fCur').value=curs.includes(keepC)?keepC:'';
+  F.bank=$('fBank').value;F.cur=$('fCur').value;
+  $('bankList').innerHTML=banks.map(b=>'<option value="'+esc(b)+'">').join('');
+  $('curList').innerHTML=[...new Set(curs.concat(Object.keys(DEF_RATE)))].sort().map(c=>'<option value="'+esc(c)+'">').join('');
+}
+
+function render(){renderSelects();renderHead();renderTable();renderCards();renderStats();$('remindDays').value=settings.remindDays;renderRates();}
+
+/* ============ 表單 ============ */
+function openForm(id){
+  editingId=id;dueManual=false;
+  const r=id?records.find(x=>x.id===id):null;
+  $('mTitle').textContent=r?'編輯記錄':'新增記錄';
+  $('iBank').value=r?r.bank||'':''; $('iCode').value=r?r.code||'':''; $('iName').value=r?r.name||'':'';
+  $('iBuy').value=r?r.buyDate||'':today();
+  $('iTermV').value=r&&num(r.termValue)!=null?r.termValue:''; $('iTermU').value=r?(r.termUnit||'M'):'M';
+  $('iDue').value=r?r.dueDate||'':''; dueManual=!!(r&&r.dueDate&&r.dueManual);
+  $('iCur').value=r?r.currency||'':'TWD';
+  $('iAmt').value=r&&num(r.principal)!=null?r.principal:'';
+  $('iRMin').value=r&&num(r.rateMin)!=null?r.rateMin:''; $('iRMax').value=r&&num(r.rateMax)!=null?r.rateMax:'';
+  $('iNote').value=r?r.note||'':'';
+  clearErr();$('modal').classList.add('show');setTimeout(()=>$('iBank').focus(),30);updatePreview();
+}
+function closeForm(){$('modal').classList.remove('show');editingId=null;}
+function clearErr(){document.querySelectorAll('#modal .field').forEach(f=>{f.classList.remove('invalid');const e=f.querySelector('.err');if(e)e.textContent='';});}
+function setErr(w,msg){const el=$(w);if(!el)return;el.classList.add('invalid');const e=el.querySelector('.err');if(e)e.textContent=msg;}
+function updatePreview(){
+  const buy=$('iBuy').value,v=num($('iTermV').value),u=$('iTermU').value;
+  if(buy&&v!=null&&v>0&&!dueManual){const c=addTerm(buy,v,u);if(c)$('iDue').value=c;}
+  const due=$('iDue').value;
+  const p=num($('iAmt').value),lo=num($('iRMin').value),hi=num($('iRMax').value);
+  const d=diffDays(buy,due);
+  let s=[];
+  if(buy&&due&&d!=null)s.push('存續 '+d+' 天（約 '+fmtN(d/365,2)+' 年）');
+  if(p!=null&&d!=null&&d>0&&(lo!=null||hi!=null)){
+    const a=lo!=null?p*lo/100*d/365:null,b=hi!=null?p*hi/100*d/365:null;
+    s.push('預期收益 '+(a!=null?fmtN(a,2):'—')+' ~ '+(b!=null?fmtN(b,2):'—')+' '+$('iCur').value);
+  }
+  $('preview').textContent=s.join('　|　')||'填寫購買日、存期與利率後，這裡會即時預估收益';
+}
+function saveForm(){
+  clearErr();let ok=true;
+  const bank=$('iBank').value.trim(),name=$('iName').value.trim(),code=$('iCode').value.trim();
+  const buy=$('iBuy').value,due=$('iDue').value,cur=$('iCur').value.trim().toUpperCase();
+  const tv=$('iTermV').value.trim(),tu=$('iTermU').value;
+  const amt=$('iAmt').value.trim(),rmin=$('iRMin').value.trim(),rmax=$('iRMax').value.trim();
+  const note=$('iNote').value.trim();
+
+  if(!bank){setErr('w-bank','請填寫銀行／機構');ok=false;}
+  if(!name){setErr('w-name','請填寫產品名稱');ok=false;}
+  if(!buy||!parseD(buy)){setErr('w-buy','請選擇有效的購買日');ok=false;}
+  if(due&&!parseD(due)){setErr('w-due','到期日格式不正確');ok=false;}
+  if(buy&&due&&parseD(buy)&&parseD(due)&&diffDays(buy,due)<0){setErr('w-due','到期日不可早於購買日');ok=false;}
+  if(tv!==''){const v=num(tv);if(v==null||v<0){setErr('w-term','存期請填 0 以上的數字');ok=false;}}
+  if(!cur){setErr('w-cur','請填寫幣種（如 TWD、USD）');ok=false;}
+  const p=num(amt);if(amt===''||p==null){setErr('w-amt','請填寫本金金額');ok=false;}else if(p<=0){setErr('w-amt','本金需大於 0');ok=false;}
+  const lo=rmin===''?null:num(rmin), hi=rmax===''?null:num(rmax);
+  if(rmin!==''&&lo==null){setErr('w-both','利率下限請填數字');ok=false;}
+  if(rmax!==''&&hi==null){setErr('w-both','利率上限請填數字');ok=false;}
+  if(lo!=null&&(lo<0||lo>100)){setErr('w-both','利率下限需在 0 ~ 100 之間');ok=false;}
+  if(hi!=null&&(hi<0||hi>100)){setErr('w-both','利率上限需在 0 ~ 100 之間');ok=false;}
+  if(lo!=null&&hi!=null&&lo>hi){setErr('w-both','利率下限不可大於上限');ok=false;}
+  if(!ok){toast('請修正表單中的錯誤',true);return;}
+
+  const rec={id:editingId||uid(),bank,code,name,buyDate:buy,
+    termValue:tv===''?null:num(tv),termUnit:tu,dueDate:due||null,
+    currency:cur,principal:p,rateMin:lo,rateMax:hi,note,dueManual:dueManual,
+    updatedAt:new Date().toISOString()};
+  if(editingId){const i=records.findIndex(x=>x.id===editingId);records[i]=Object.assign({},records[i],rec);}
+  else{rec.createdAt=new Date().toISOString();records.push(rec);}
+  save();closeForm();render();
+  toast(editingId?'記錄已更新':'記錄已新增');
+}
+function del(id){
+  const r=records.find(x=>x.id===id);if(!r)return;
+  if(!confirm('確定刪除這筆記錄？\n\n'+r.bank+'　'+r.name+'\n本金 '+fmtMoney(num(r.principal),r.currency)+'\n\n此動作無法復原。'))return;
+  records=records.filter(x=>x.id!==id);save();render();toast('記錄已刪除');
+}
+
+/* ============ 匯出入 ============ */
+function exportJson(){
+  const data={app:'finance-ledger',version:1,exportedAt:new Date().toISOString(),
+    settings:settings,records:records};
+  dl(JSON.stringify(data,null,2),'理財記錄本_備份_'+today()+'.json','application/json');
+  toast('已匯出 '+records.length+' 筆記錄');
+}
+function exportCsv(){
+  const rows=filtered();
+  const cols=['銀行／機構','產品編號','產品名稱','購買日','存期','到期日','狀態','幣種','本金','利率下限%','利率上限%','預期收益下限','預期收益上限','備註'];
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const lines=[cols.map(q).join(',')];
+  rows.forEach(r=>{const g=gain(r),st=statusOf(r);
+    lines.push([r.bank,r.code,r.name,r.buyDate,termText(r),r.dueDate,st.t,r.currency,num(r.principal),
+      num(r.rateMin),num(r.rateMax),g.min==null?'':g.min.toFixed(2),g.max==null?'':g.max.toFixed(2),r.note].map(q).join(','));});
+  dl('\ufeff'+lines.join('\r\n'),'理財記錄本_'+today()+'.csv','text/csv;charset=utf-8');
+  toast('已匯出 CSV（'+rows.length+' 筆）');
+}
+function dl(text,name,type){
+  const b=new Blob([text],{type});const u=URL.createObjectURL(b);
+  const a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(u);a.remove();},500);
+}
+function importJson(file){
+  const rd=new FileReader();
+  rd.onload=()=>{
+    let data;try{data=JSON.parse(rd.result);}catch(e){toast('檔案不是有效的 JSON',true);return;}
+    const arr=Array.isArray(data)?data:(Array.isArray(data.records)?data.records:null);
+    if(!arr){toast('檔案中找不到記錄資料',true);return;}
+    const clean=arr.filter(r=>r&&typeof r==='object').map(r=>({
+      id:r.id||uid(),bank:String(r.bank||''),code:String(r.code||''),name:String(r.name||''),
+      buyDate:r.buyDate||'',termValue:num(r.termValue),termUnit:r.termUnit||'M',dueDate:r.dueDate||null,
+      currency:String(r.currency||'?').toUpperCase(),principal:num(r.principal)||0,
+      rateMin:num(r.rateMin),rateMax:num(r.rateMax),note:String(r.note||''),dueManual:!!r.dueManual,
+      createdAt:r.createdAt||'',updatedAt:r.updatedAt||''}));
+    if(!clean.length){toast('檔案中沒有可匯入的記錄',true);return;}
+    dialog('匯入備份','檔案中包含 <b>'+clean.length+'</b> 筆記錄，目前系統內有 <b>'+records.length+'</b> 筆。<br>要如何匯入？',
+      [{t:'取消',c:''},{t:'合併（保留現有，附加新資料）',c:'' ,act:()=>{records=records.concat(clean);save();render();toast('已合併，共 '+records.length+' 筆');}},
+       {t:'覆蓋（取代全部現有資料）',c:'primary',act:()=>{records=clean;if(data&&data.settings&&data.settings.rates){settings=Object.assign(settings,data.settings);saveS();}save();render();toast('已覆蓋匯入 '+records.length+' 筆');}}]);
+  };
+  rd.readAsText(file);
+}
+function dialog(title,html,btns){
+  const m=$('dlg');
+  m.innerHTML='<div class="modalbox" style="max-width:460px">'+
+    '<div class="mh"><h3>'+title+'</h3><button class="x" id="dlgX">×</button></div>'+
+    '<div class="mb">'+html+'<div class="dlgbtns"></div></div></div>';
+  const bar=m.querySelector('.dlgbtns');
+  btns.forEach(b=>{const el=document.createElement('button');el.textContent=b.t;if(b.c)el.className=b.c;
+    el.onclick=()=>{closeDlg();if(b.act)b.act();};bar.appendChild(el);});
+  $('dlgX').onclick=closeDlg;
+  m.classList.add('show');
+}
+function closeDlg(){$('dlg').classList.remove('show');$('dlg').innerHTML='';}
+function loadDemo(){
+  const t=today(),mk=(o)=>Object.assign({id:uid(),termUnit:'M',rateMin:null,rateMax:null,note:'',dueManual:false,createdAt:''},o);
+  records=[
+    mk({bank:'玉山銀行',code:'FD-2026-018',name:'美元優利定存 6 個月',buyDate:t,termValue:6,dueDate:addTerm(t,6,'M'),currency:'USD',principal:30000,rateMin:4.6,rateMax:5.0,note:'臨櫃開戶優惠利率'}),
+    mk({bank:'玉山銀行',code:'FD-2026-021',name:'台幣機動定存 1 年',buyDate:addTerm(t,-4,'M'),termValue:12,dueDate:addTerm(addTerm(t,-4,'M'),12,'M'),currency:'TWD',principal:500000,rateMin:1.55,rateMax:1.55,note:'機動利率，按月計息'}),
+    mk({bank:'中國信託',code:'WM-1125',name:'結構型商品 保本型 3 個月',buyDate:addTerm(t,-2,'M'),termValue:3,dueDate:addTerm(addTerm(t,-2,'M'),3,'M'),currency:'TWD',principal:800000,rateMin:1.2,rateMax:3.8,note:'收益視連結標的表現'}),
+    mk({bank:'中國信託',code:'FD-HK-07',name:'港幣定存 3 個月',buyDate:t,termValue:3,dueDate:addTerm(t,3,'M'),currency:'HKD',principal:120000,rateMin:3.4,rateMax:3.9,note:''}),
+    mk({bank:'國泰世華',code:'CN-3301',name:'人民幣優利定存 1 年',buyDate:addTerm(t,-9,'M'),termValue:12,dueDate:addTerm(addTerm(t,-9,'M'),12,'M'),currency:'CNY',principal:200000,rateMin:2.1,rateMax:2.4,note:'到期前一個月通知是否續存'}),
+    mk({bank:'台新銀行',code:'FD-JP-55',name:'日幣定存 6 個月',buyDate:addTerm(t,-1,'M'),termValue:6,dueDate:addTerm(addTerm(t,-1,'M'),6,'M'),currency:'JPY',principal:1500000,rateMin:0.35,rateMax:0.55,note:'匯率波動大，注意匯損'}),
+    mk({bank:'永豐銀行',code:'FD-2026-002',name:'台幣階梯定存 3 個月',buyDate:t,termValue:3,dueDate:addTerm(t,3,'M'),currency:'TWD',principal:300000,rateMin:1.45,rateMax:1.7,note:'階梯式利率'}),
+  ];
+  save();render();toast('已載入 '+records.length+' 筆範例資料（可隨時刪除）');
+}
+
+/* ============ 事件綁定 ============ */
+$('btnAdd').onclick=()=>openForm(null);
+$('mSave').onclick=saveForm;
+$('mCancel').onclick=closeForm;
+$('mClose').onclick=closeForm;
+$('modal').onclick=e=>{if(e.target.id==='modal')closeForm();};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('modal').classList.contains('show'))closeForm();});
+['iBuy','iTermV','iTermU','iDue','iAmt','iRMin','iRMax','iCur'].forEach(id=>{
+  $(id).addEventListener('input',e=>{if(id==='iDue')dueManual=true;updatePreview();});
+});
+$('iDue').addEventListener('change',()=>{dueManual=true;});
+$('btnExport').onclick=exportJson;
+$('btnCsv').onclick=exportCsv;
+$('btnImport').onclick=()=>$('fileInput').click();
+$('fileInput').onchange=e=>{const f=e.target.files[0];if(f)importJson(f);e.target.value='';};
+
+const bind=(id,key)=>$(id).addEventListener('input',()=>{F[key]=$(id).value;renderTable();renderCards();renderStats();});
+bind('fKw','kw');bind('fRMin','rMin');bind('fRMax','rMax');
+$('fBank').onchange=()=>{F.bank=$('fBank').value;renderTable();renderCards();renderStats();};
+$('fCur').onchange=()=>{F.cur=$('fCur').value;renderTable();renderCards();renderStats();};
+$('fRateMode').onchange=()=>{F.rateMode=$('fRateMode').value;renderTable();renderCards();renderStats();};
+$('fDFrom').onchange=()=>{F.dFrom=$('fDFrom').value;renderTable();renderCards();renderStats();};
+$('fDTo').onchange=()=>{F.dTo=$('fDTo').value;renderTable();renderCards();renderStats();};
+$('btnClear').onclick=()=>{
+  Object.keys(F).forEach(k=>F[k]= k==='rateMode'?'overlap':'');
+  $('fKw').value='';$('fRMin').value='';$('fRMax').value='';$('fDFrom').value='';$('fDTo').value='';
+  $('fRateMode').value='overlap';render();toast('已清除篩選條件');
+};
+document.querySelectorAll('[data-quick]').forEach(b=>b.onclick=()=>{
+  const q=b.dataset.quick,t=today();
+  if(q==='overdue'){F.dFrom='';F.dTo=t;}
+  else if(q==='year'){F.dFrom=t.slice(0,4)+'-01-01';F.dTo=t.slice(0,4)+'-12-31';}
+  else {F.dFrom=t;F.dTo=addTerm(t,parseInt(q),'D');}
+  $('fDFrom').value=F.dFrom;$('fDTo').value=F.dTo;
+  renderTable();renderCards();renderStats();
+});
+$('remindDays').onchange=()=>{const v=num($('remindDays').value);settings.remindDays=(v!=null&&v>0)?Math.round(v):30;$('remindDays').value=settings.remindDays;saveS();render();};
+/* 更換基準幣種時，把既有匯率換算過去（rates 語意：1 外幣 = ? 基準幣；新值 = 舊值 ÷ 1 新基準幣的舊值） */
+function rebase(nb){
+  const ob=settings.base; if(!ob||ob===nb)return false;
+  const rb=num(settings.rates[nb]); if(rb==null||rb<=0)return false;
+  const out={};
+  Object.keys(settings.rates).forEach(c=>{const v=num(settings.rates[c]);out[c]=(v==null)?v:v/rb;});
+  out[nb]=1;settings.rates=out;return true;
+}
+$('baseCur').onchange=()=>{
+  const nb=$('baseCur').value;
+  rebase(nb);
+  settings.base=nb;saveS();renderStats();renderCards();renderRates();
+  if(settings.autoRate!==false)fetchRates(true);   // 有網路就用抓到的值覆蓋，沒網路則沿用換算結果
+};
+$('btnRate').onclick=()=>fetchRates(false);
+$('autoRate').onchange=()=>{settings.autoRate=$('autoRate').checked;saveS();
+  if(settings.autoRate&&!settings.ratesUpdatedAt)fetchRates(true);};
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');$('view-'+t.dataset.view).classList.add('active');
+});
+
+/* ============ 啟動 ============ */
+load();render();
+/* 每次執行都聯網更新匯率；失敗則沿用上次匯率，不影響其他功能 */
+(function initRates(){
+  if(settings.ratesUpdatedAt){
+    setRateStatus('','上次更新 · '+rateTime()+(settings.ratesSource?' · '+settings.ratesSource:''));
+    $('rateNote').textContent='程式每次開啟會自動重新抓取匯率。';
+  }else{
+    $('rateNote').textContent='程式每次開啟會自動抓取匯率（基準 '+settings.base+'）。若網路不可用，會沿用內建預設匯率。';
+  }
+  if(settings.autoRate!==false)fetchRates(true);
+})();
+</script>
+</body>
+</html>

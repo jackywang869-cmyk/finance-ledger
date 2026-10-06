@@ -1,0 +1,42 @@
+# ---- 依賴套件 ----
+node_modules/
+.pnp
+.pnp.js
+bower_components/
+
+# ---- 建置產物 / 快取 ----
+dist/
+build/
+out/
+_site/
+.cache/
+.vite/
+.parcel-cache/
+*.tsbuildinfo
+
+# ---- 環境變數與金鑰等敏感檔案 ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+secrets.json
+credentials.json
+*.token
+*.secret
+
+# ---- 編輯器 / 作業系統 ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 記錄檔 ----
+*.log
+npm-debug.log*
+yarn-error.log*
